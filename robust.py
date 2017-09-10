@@ -2,7 +2,7 @@ import numpy as np
 
 from subproblem import subproblem, set_subproblem_objective, get_uncertain_variables
 from master_problem import master_problem, augment_master_problem, get_investment_cost
-from common_data import nodes
+from common_data import nodes, candidate_units, candidate_lines
 
 
 MAX_ITERATIONS = 10
@@ -41,15 +41,18 @@ for iteration in range(MAX_ITERATIONS):
 	LB = master_problem.objVal
 
 	# obtain investment decisions
-	master_problem_x = master_problem.getVarByName('x')
-	master_problem_y = master_problem.getVarByName('y')
+	master_problem_x = [v for v in master_problem.getVars() if 'unit_investment' in v.varName]
+	master_problem_y = [v for v in master_problem.getVars() if 'line_investment' in v.varName]
 
 	# round and convert to integer as there may be floating point errors
-	x = int(np.round(master_problem_x.x))
-	y = int(np.round(master_problem_y.x))
+	x = [int(np.round(v.x)) for v in master_problem_x]
+	y = [int(np.round(v.x)) for v in master_problem_y]
 
 	if iteration == 0:
-		assert x == y == 0, 'Initial master problem solution suboptimal.'
+		assert np.allclose(x, 0) and np.allclose(y, 0), 'Initial master problem solution suboptimal.'
+
+	x = {u: v for u, v in zip(candidate_units, x)}
+	y = {l: v for l, v in zip(candidate_lines, y)}
 
 	# update subproblem objective function with the investment decisions
 	set_subproblem_objective(x, y)
